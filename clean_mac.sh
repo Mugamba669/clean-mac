@@ -47,7 +47,9 @@ log_skip() {
 get_size_bytes() {
     local path="$1"
     if [ -e "$path" ]; then
-        du -sk "$path" 2>/dev/null | awk '{print $1 * 1024}' || echo 0
+        local result
+        result=$(du -sk "$path" 2>/dev/null | tail -1 | awk '{print $1 * 1024}') || true
+        echo "${result:-0}"
     else
         echo 0
     fi
@@ -55,7 +57,7 @@ get_size_bytes() {
 
 # Human-readable size
 human_size() {
-    local bytes=$1
+    local bytes=${1:-0}
     if [ "$bytes" -ge 1073741824 ]; then
         echo "$(echo "scale=1; $bytes / 1073741824" | bc)GB"
     elif [ "$bytes" -ge 1048576 ]; then
@@ -77,7 +79,7 @@ clean_dir() {
         sudo rm -rf "${path:?}/"* 2>/dev/null || true
         local size_after
         size_after=$(get_size_bytes "$path")
-        local freed=$((size_before - size_after))
+        local freed=$(( ${size_before:-0} - ${size_after:-0} ))
         if [ "$freed" -gt 0 ]; then
             TOTAL_FREED=$((TOTAL_FREED + freed))
             log_info "$label — freed $(human_size $freed)"
